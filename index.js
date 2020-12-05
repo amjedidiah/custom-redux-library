@@ -3,7 +3,7 @@
  * @typedef {Object} store
  * @property {*} dispatch - Updates store state
  * @property {*} getState - Gets store state
- * @property {*} subscribe
+ * @property {*} subscribe - Listens for changes
  */
 
 /**
@@ -13,7 +13,14 @@
  */
 
 /**
- * Alternative state definition for a function
+ * Definition for the rootReducer state
+ * @typedef {Object} appState
+ * @property {todo[]} todos - todos state
+ * @property {goal[]} goals - goals state
+ */
+
+/**
+ * Alternative todos state definition for a function
  * @param {Object[]} state - Store state
  * @param {string} state[].id - todo ID
  */
@@ -27,7 +34,16 @@
 /**
  * Definition for TODO
  * @typedef {Object} todo
- * @property {string} id - todo ID
+ * @property {number} id - todo ID
+ * @property {boolean} complete - todo complete status
+ * @property {string} name - todo name
+ */
+
+/**
+ * Definition for Goal
+ * @typedef {Object} goal
+ * @property {number} id - goal ID
+ * @property {string} name - goal name
  */
 
 /**
@@ -36,7 +52,7 @@
  * 2. Get the state
  * 3. Listen for state changes
  * 4. Update the state
- * @param {*} reducer - Reducer function
+ * @param {*} reducer - Root Reducer function
  * @returns {store}
  */
 const createStore = (reducer) => {
@@ -44,7 +60,7 @@ const createStore = (reducer) => {
   let state;
   /**
    * Gets current state value: RETURNS THE STATE
-   * @returns {todo[]} state - Store state
+   * @returns {todo[] | goal[]} state - Store state
    */
   const getState = () => state;
 
@@ -82,9 +98,31 @@ const createStore = (reducer) => {
 };
 
 /**
- * TODO reducer
- * @param {todo[]} [state=[]] - Store state
- * @param {action} action - Action chnaging the state
+ *! APP CODE
+ */
+
+/**
+ ** ACTION TYPES
+ */
+const ADD_GOAL = "ADD_GOAL";
+const REMOVE_GOAL = "REMOVE_GOAL";
+const ADD_TODO = "ADD_TODO";
+const REMOVE_TODO = "REMOVE_TODO";
+const TOGGLE_TODO = "TOGGLE_TODO";
+
+/**
+ ** ACTION CREATORS
+ */
+const addGoalAction = (goal) => ({ type: ADD_GOAL, goal });
+const removeGoalAction = (id) => ({ type: REMOVE_GOAL, id });
+const addTodoAction = (todo) => ({ type: ADD_TODO, todo });
+const removeTodoAction = (id) => ({ type: REMOVE_TODO, id });
+const toggleTodoAction = (id) => ({ type: TOGGLE_TODO, id });
+
+/**
+ ** TODO reducer
+ * @param {todo[]} [state=[]] - Todo state
+ * @param {action} action - Action changing the state
  * @returns {todo[]} - Updated state
  */
 const todos = (state = [], action) =>
@@ -96,11 +134,63 @@ const todos = (state = [], action) =>
     ),
   }[action.type] || state);
 
-const store = createStore(todos);
+/**
+ ** Goal Reducer
+ * @param {goal[]} [state=[]] - Goal state
+ * @param {action} action  - Action changing the state
+ * @returns {goal[]} - Updated state
+ */
+const goals = (state = [], action) =>
+  ({
+    ADD_GOAL: [...state, action.goal],
+    REMOVE_GOAL: state.filter(({ id }) => id !== action.id),
+  }[action.type] || state);
+
+/**
+ ** Root Reducer
+ * @param {appState} state - App state
+ * @param {action} action - Action changing the state
+ * @returns {appState} - Updated app state
+ */
+const app = (state = {}, action) => ({
+  todos: todos(state.todos, action),
+  goals: goals(state.goals, action),
+});
+
+/**
+ ** STORE CODE
+ */
+const store = createStore(app);
 
 store.subscribe(() => console.log("The new state is ", store.getState()));
 
-store.dispatch({
-  type: "ADD_TODO",
-  todo: { id: 0, name: "Learn Redux", complete: false },
-});
+store.dispatch(
+  addTodoAction({
+    id: 0,
+    name: "Walk the dog",
+    complete: false,
+  })
+);
+
+store.dispatch(
+  addTodoAction({
+    id: 1,
+    name: "Wash the car",
+    complete: false,
+  })
+);
+
+store.dispatch(
+  addTodoAction({
+    id: 2,
+    name: "Go to the gym",
+    complete: true,
+  })
+);
+
+store.dispatch(removeTodoAction(1));
+store.dispatch(toggleTodoAction(0));
+
+store.dispatch(addGoalAction({id: 0, name:  "Learn Redux"}));
+store.dispatch(addGoalAction({id: 1, name:  "Lose 20 pounds"}));
+store.dispatch(removeGoalAction(0));
