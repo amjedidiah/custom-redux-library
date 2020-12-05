@@ -1,9 +1,9 @@
 /**
  * Definition for store
  * @typedef {Object} store
- * @property {*} dispatch - Updates store state
- * @property {*} getState - Gets store state
- * @property {*} subscribe - Listens for changes
+ * @property {function} dispatch - Updates store state
+ * @property {function} getState - Gets store state
+ * @property {function} subscribe - Listens for changes
  */
 
 /**
@@ -34,7 +34,7 @@
 /**
  * Definition for TODO
  * @typedef {Object} todo
- * @property {number} id - todo ID
+ * @property {string} id - todo ID
  * @property {boolean} complete - todo complete status
  * @property {string} name - todo name
  */
@@ -42,17 +42,20 @@
 /**
  * Definition for Goal
  * @typedef {Object} goal
- * @property {number} id - goal ID
+ * @property {string} id - goal ID
  * @property {string} name - goal name
  */
 
+/**
+ *! LIBRARY CODE
+ */
 /**
  * The store should have 4 parts
  * 1. The state
  * 2. Get the state
  * 3. Listen for state changes
  * 4. Update the state
- * @param {*} reducer - Root Reducer function
+ * @param {function} reducer - Root Reducer function
  * @returns {store}
  */
 const createStore = (reducer) => {
@@ -73,7 +76,7 @@ const createStore = (reducer) => {
    */
   /**
    * Updates listeners: LISTENS FOR CHANGES
-   * @param {*} listener
+   * @param {function} listener
    * @returns {unsubscribe} unsubscribe
    */
   const subscribe = (listener) => {
@@ -162,35 +165,95 @@ const app = (state = {}, action) => ({
  */
 const store = createStore(app);
 
-store.subscribe(() => console.log("The new state is ", store.getState()));
+store.subscribe(() => {
+  const { goals, todos } = store.getState();
 
-store.dispatch(
-  addTodoAction({
-    id: 0,
-    name: "Walk the dog",
-    complete: false,
-  })
-);
+  document.getElementById("goals").innerHTML = "";
+  document.getElementById("todos").innerHTML = "";
 
-store.dispatch(
-  addTodoAction({
-    id: 1,
-    name: "Wash the car",
-    complete: false,
-  })
-);
+  goals.forEach((goal) => addGoalOrTodoToDOM(goal, "goals"));
+  todos.forEach((todo) => addGoalOrTodoToDOM(todo, "todos"));
+});
 
-store.dispatch(
-  addTodoAction({
-    id: 2,
-    name: "Go to the gym",
-    complete: true,
-  })
-);
+/**
+ *! DOM CODE
+ */
 
-store.dispatch(removeTodoAction(1));
-store.dispatch(toggleTodoAction(0));
+/**
+ * Definition for id
+ * @typedef {string} id - A goal or todo id
+ */
 
-store.dispatch(addGoalAction({id: 0, name:  "Learn Redux"}));
-store.dispatch(addGoalAction({id: 1, name:  "Lose 20 pounds"}));
-store.dispatch(removeGoalAction(0));
+/**
+ * Generates Random ID
+ * @returns {id}
+ */
+const generateId = () =>
+  Math.random().toString(36).substring(2) + new Date().getTime().toString(36);
+
+/**
+ * UI function to add todo or goal
+ * @param {string} inputID - The id of the input element
+ */
+const addGoalOrTodo = (inputID) => {
+  const input = document.getElementById(inputID);
+  const name = input.value;
+  input.value = "";
+
+  const action =
+    inputID === "todo"
+      ? addTodoAction({
+          id: generateId(),
+          complete: false,
+          name,
+        })
+      : addGoalAction({
+          id: generateId(),
+          name,
+        });
+
+  store.dispatch(action);
+};
+
+/**
+ * Creates the delete button
+ * @param {function} onClick - Function to call onClicking the delete button
+ * @returns{Object}
+ */
+const createRemoveButton = (onClick) => {
+  const removeBtn = document.createElement("button");
+  removeBtn.innerHTML = "x";
+  removeBtn.addEventListener("click", onClick);
+
+  return removeBtn;
+};
+
+/**
+ * Add goal or todo to dom
+ * @param {Object} object - Either goal or todo
+ * @param {string} object.id - The id of the goal or todo
+ * @param {string} object.name - The name of the goal or todo
+ * @param {boolean} [object.completed] - Inform if todo is completed
+ * @param {string} type - Specifies which state we are adding to the DOM
+ */
+const addGoalOrTodoToDOM = (object, type) => {
+  const node = document.createElement("li");
+  const text = document.createTextNode(object.name);
+  const className = type === "todos" && object.complete ? `${type} done` : type;
+
+  const actionCreator =
+    type === "todos"
+      ? removeTodoAction(object.id)
+      : removeGoalAction(object.id);
+  const removeBtn = createRemoveButton(() => store.dispatch(actionCreator));
+
+  node.appendChild(text);
+  node.appendChild(removeBtn);
+  node.setAttribute("class", className);
+  node.addEventListener(
+    "click",
+    () => type === "todos" && store.dispatch(toggleTodoAction(object.id))
+  );
+
+  document.getElementById(type).appendChild(node);
+};

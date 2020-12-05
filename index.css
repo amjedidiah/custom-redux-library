@@ -1,0 +1,4 @@
+.todos.done {
+  text-decoration: line-through !important;
+  color: danger;
+}
